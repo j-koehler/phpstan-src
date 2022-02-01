@@ -7,22 +7,14 @@ use RuntimeException;
 use function array_map;
 use function array_slice;
 use function arsort;
-use function memory_get_peak_usage;
-use function microtime;
 use const SORT_NUMERIC;
 
-class ConsumptionCollector
+class ConsumptionTrackingCollector
 {
 
 	private int $consumersAdded = 0;
 
-	private string $file = '';
-
 	private int $totalMemoryConsumed = 0;
-
-	private float $processingStartedAt = 0;
-
-	private int $memoryConsumedAtStart = 0;
 
 	/** @var array<string, int>  */
 	private array $topMemoryConsumer = [];
@@ -30,30 +22,22 @@ class ConsumptionCollector
 	/** @var array<string, float>  */
 	private array $topTimeConsumer = [];
 
+	private string $file;
 
 	public function __construct(private int $topX = 15)
 	{
 	}
 
-	public function registerFile(string $fileProcessed): void
+	public function addConsumption(FileConsumptionTracking $consumption): void
 	{
-		if ($this->consumersAdded > 2000) {
-			$this->purgeOverflow();
-		}
-
-		$this->processingStartedAt = microtime(true);
-		$this->memoryConsumedAtStart = memory_get_peak_usage(true);
-
-		$this->file = $fileProcessed;
 		$this->consumersAdded++;
-	}
 
-	public function trackConsumption(): void
-	{
-		$this->totalMemoryConsumed = memory_get_peak_usage(true);
+		$this->totalMemoryConsumed = $consumption->getTotalMemoryConsumed();
 
-		$this->topMemoryConsumer[$this->file] = $this->totalMemoryConsumed - $this->memoryConsumedAtStart;
-		$this->topTimeConsumer[$this->file] = microtime(true) - $this->processingStartedAt;
+		$this->topMemoryConsumer[$consumption->getFile()] = $consumption->getMemoryConsumed();
+		$this->topTimeConsumer[$consumption->getFile()] = $consumption->getTimeConsumed();
+
+		$this->file = $consumption->getFile();
 	}
 
 	public function getTotalMemoryConsumed(): int
@@ -61,10 +45,10 @@ class ConsumptionCollector
 		return $this->totalMemoryConsumed;
 	}
 
-	public function getMemoryConsumed(): int
+	public function getMemoryConsumedForLatestFile(): int
 	{
 		if ($this->consumersAdded === 0) {
-			throw new RuntimeException('no files were registered');
+			throw new RuntimeException('no files were tracked');
 		} elseif (!isset($this->topMemoryConsumer[$this->file])) {
 			throw new ShouldNotHappenException('no memory consumption found for ' . $this->file . ' (consumers added: ' . $this->consumersAdded . ')');
 		}
@@ -72,10 +56,10 @@ class ConsumptionCollector
 		return $this->topMemoryConsumer[$this->file];
 	}
 
-	public function getTimeConsumed(): float
+	public function getTimeConsumedForLatestFile(): float
 	{
 		if ($this->consumersAdded === 0) {
-			throw new RuntimeException('no files were registered');
+			throw new RuntimeException('no files were tracked');
 		} elseif (!isset($this->topTimeConsumer[$this->file])) {
 			throw new ShouldNotHappenException('no time consumption found for ' . $this->file . ' (consumers added: ' . $this->consumersAdded . ')');
 		}

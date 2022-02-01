@@ -6,7 +6,7 @@ use PHPStan\Analyser\AnalyserResult;
 use PHPStan\Analyser\IgnoredErrorHelper;
 use PHPStan\Analyser\ResultCache\ResultCacheManagerFactory;
 use PHPStan\Internal\BytesHelper;
-use PHPStan\Internal\ConsumptionCollector;
+use PHPStan\Internal\ConsumptionTrackingCollector;
 use PHPStan\Internal\TimeHelper;
 use PHPStan\PhpDoc\StubValidator;
 use Symfony\Component\Console\Input\InputInterface;
@@ -129,6 +129,11 @@ class AnalyseApplication
 			return new AnalyserResult([], [], [], [], false);
 		}
 
+		$consumptionCollector = null;
+		if ($stdOutput->isDebug()) {
+			// use collector whenever phpstan runs with -vvv
+			$consumptionCollector = new ConsumptionTrackingCollector();
+		}
 		if (!$debug) {
 			$progressStarted = false;
 			$preFileCallback = null;
@@ -146,28 +151,35 @@ class AnalyseApplication
 			};
 			$postFileCallback = null;
 			if ($stdOutput->isDebug()) {
-				$consumptionCollector = new ConsumptionCollector();
-
-				$preFileCallback = static function (string $file) use ($stdOutput, $consumptionCollector): void {
-					$stdOutput->writeLineFormatted($file);
-					$consumptionCollector->registerFile($file);
-				};
-
 				$postFileCallback = static function () use ($stdOutput, $consumptionCollector): void {
-					$consumptionCollector->trackConsumption();
+					if ($consumptionCollector === null) {
+						return;
+					}
 					$stdOutput->writeLineFormatted(
 						sprintf(
 							'--- consumed %s, total %s, took %s',
-							BytesHelper::bytes($consumptionCollector->getMemoryConsumed()),
+							BytesHelper::bytes($consumptionCollector->getMemoryConsumedForLatestFile()),
 							BytesHelper::bytes($consumptionCollector->getTotalMemoryConsumed()),
-							TimeHelper::humaniseFractionalSeconds($consumptionCollector->getTimeConsumed()),
+							TimeHelper::humaniseFractionalSeconds($consumptionCollector->getTimeConsumedForLatestFile()),
 						),
 					);
 				};
 			}
 		}
 
-		$analyserResult = $this->analyserRunner->runAnalyser($files, $allAnalysedFiles, $preFileCallback, $postFileCallback, $debug, true, $projectConfigFile, null, null, $input);
+		$analyserResult = $this->analyserRunner->runAnalyser(
+			$files,
+			$allAnalysedFiles,
+			$preFileCallback,
+			$postFileCallback,
+			$debug,
+			true,
+			$projectConfigFile,
+			null,
+			null,
+			$consumptionCollector,
+			$input,
+		);
 
 		if (isset($progressStarted) && $progressStarted) {
 			$errorOutput->getStyle()->progressFinish();

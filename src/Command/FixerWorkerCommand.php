@@ -7,6 +7,7 @@ use PHPStan\Analyser\AnalyserResult;
 use PHPStan\Analyser\IgnoredErrorHelper;
 use PHPStan\Analyser\ResultCache\ResultCacheManager;
 use PHPStan\Analyser\ResultCache\ResultCacheManagerFactory;
+use PHPStan\Internal\ConsumptionTrackingCollector;
 use PHPStan\ShouldNotHappenException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -143,6 +144,7 @@ class FixerWorkerCommand extends Command
 		[$inceptionFiles, $isOnlyFiles] = $inceptionResult->getFiles();
 		$resultCache = $resultCacheManager->restore($inceptionFiles, false, false, $projectConfigArray, $inceptionResult->getErrorOutput(), $restoreResultCache);
 
+		$consumptionCollector = new ConsumptionTrackingCollector();
 		$intermediateAnalyserResult = $analyserRunner->runAnalyser(
 			$resultCache->getFilesToAnalyse(),
 			$inceptionFiles,
@@ -153,6 +155,7 @@ class FixerWorkerCommand extends Command
 			$configuration,
 			$tmpFile,
 			$insteadOfFile,
+			$consumptionCollector,
 			$input,
 		);
 		$result = $resultCacheManager->process(

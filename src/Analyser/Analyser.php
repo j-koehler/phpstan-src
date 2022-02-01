@@ -3,6 +3,8 @@
 namespace PHPStan\Analyser;
 
 use Closure;
+use PHPStan\Internal\ConsumptionTrackingCollector;
+use PHPStan\Internal\FileConsumptionTracking;
 use PHPStan\Rules\Registry;
 use Throwable;
 use function array_fill_keys;
@@ -29,11 +31,12 @@ class Analyser
 	 * @param string[]|null $allAnalysedFiles
 	 */
 	public function analyse(
-		array $files,
-		?Closure $preFileCallback = null,
-		?Closure $postFileCallback = null,
-		bool $debug = false,
-		?array $allAnalysedFiles = null,
+		array                         $files,
+		?Closure                      $preFileCallback = null,
+		?Closure                      $postFileCallback = null,
+		?ConsumptionTrackingCollector $consumptionCollector = null,
+		bool                          $debug = false,
+		?array                        $allAnalysedFiles = null,
 	): AnalyserResult
 	{
 		if ($allAnalysedFiles === null) {
@@ -49,6 +52,9 @@ class Analyser
 		$dependencies = [];
 		$exportedNodes = [];
 		foreach ($files as $file) {
+			if ($consumptionCollector !== null) {
+				$fileConsumption = new FileConsumptionTracking($file);
+			}
 			if ($preFileCallback !== null) {
 				$preFileCallback($file);
 			}
@@ -90,6 +96,10 @@ class Analyser
 				continue;
 			}
 
+			if ($consumptionCollector !== null) {
+				$fileConsumption->stopTracking();
+				$consumptionCollector->addConsumption($fileConsumption);
+			}
 			$postFileCallback(1);
 		}
 
