@@ -64,7 +64,16 @@ class AnalyserRunner
 			&& $mainScript !== null
 			&& $schedule->getNumberOfProcesses() > 1
 		) {
-			return $this->parallelAnalyser->analyse($schedule, $mainScript, $postFileCallback, $projectConfigFile, $tmpFile, $insteadOfFile, $input);
+			return $this->parallelAnalyser->analyse(
+				$schedule,
+				$mainScript,
+				$postFileCallback,
+				$projectConfigFile,
+				$tmpFile,
+				$insteadOfFile,
+				$consumptionTrackingCollector,
+				$input
+			);
 		}
 
 		return $this->analyser->analyse(

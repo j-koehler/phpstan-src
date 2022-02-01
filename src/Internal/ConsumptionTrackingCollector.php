@@ -28,7 +28,7 @@ class ConsumptionTrackingCollector
 	{
 	}
 
-	public function addConsumption(FileConsumptionTracking $consumption): void
+	public function addConsumption(FileConsumptionTracker $consumption): void
 	{
 		$this->consumersAdded++;
 

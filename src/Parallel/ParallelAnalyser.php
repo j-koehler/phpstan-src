@@ -9,6 +9,8 @@ use Nette\Utils\Random;
 use PHPStan\Analyser\AnalyserResult;
 use PHPStan\Analyser\Error;
 use PHPStan\Dependency\ExportedNode;
+use PHPStan\Internal\ConsumptionTrackingCollector;
+use PHPStan\Internal\FileConsumptionTracker;
 use PHPStan\Process\ProcessHelper;
 use React\EventLoop\StreamSelectLoop;
 use React\Socket\ConnectionInterface;
@@ -49,13 +51,14 @@ class ParallelAnalyser
 	 * @param Closure(int ): void|null $postFileCallback
 	 */
 	public function analyse(
-		Schedule $schedule,
-		string $mainScript,
-		?Closure $postFileCallback,
-		?string $projectConfigFile,
-		?string $tmpFile,
-		?string $insteadOfFile,
-		InputInterface $input,
+		Schedule                      $schedule,
+		string                        $mainScript,
+		?Closure                      $postFileCallback,
+		?string                       $projectConfigFile,
+		?string                       $tmpFile,
+		?string                       $insteadOfFile,
+		?ConsumptionTrackingCollector $consumptionTrackingCollector,
+		InputInterface                $input,
 	): AnalyserResult
 	{
 		$jobs = array_reverse($schedule->getJobs());
@@ -129,6 +132,10 @@ class ParallelAnalyser
 				$commandOptions[] = escapeshellarg($insteadOfFile);
 			}
 
+			if ($consumptionTrackingCollector !== null) {
+				$commandOptions[] = '--track-consumption';
+			}
+
 			$process = new Process(ProcessHelper::getWorkerCommand(
 				$mainScript,
 				'worker',
@@ -136,7 +143,7 @@ class ParallelAnalyser
 				$commandOptions,
 				$input,
 			), $loop, $this->processTimeout);
-			$process->start(function (array $json) use ($process, &$internalErrors, &$errors, &$dependencies, &$exportedNodes, &$jobs, $postFileCallback, &$internalErrorsCount, &$reachedInternalErrorsCountLimit, $processIdentifier): void {
+			$process->start(function (array $json) use ($process, &$internalErrors, &$errors, &$dependencies, &$exportedNodes, &$jobs, $postFileCallback, &$internalErrorsCount, &$reachedInternalErrorsCountLimit, $processIdentifier, $consumptionTrackingCollector): void {
 				foreach ($json['errors'] as $jsonError) {
 					if (is_string($jsonError)) {
 						$internalErrors[] = sprintf('Internal error: %s', $jsonError);
@@ -167,6 +174,13 @@ class ParallelAnalyser
 
 						return $class::decode($node['data']);
 					}, $fileExportedNodes);
+				}
+
+				/**
+				 * @var array{"file": string, "timeConsumed": float, "memoryConsumed": int, "totalMemoryConsumed": int} $consumptionData
+				 */
+				foreach ($json['consumptionData'] as $consumptionData) {
+					$consumptionTrackingCollector->addConsumption(FileConsumptionTracker::createFromArray($consumptionData));
 				}
 
 				if ($postFileCallback !== null) {
