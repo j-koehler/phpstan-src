@@ -22,7 +22,7 @@ class ConsumptionTrackingCollector
 	/** @var array<string, float>  */
 	private array $topTimeConsumer = [];
 
-	private string $file;
+	private string $file = '';
 
 	public function __construct(private int $topX = 15)
 	{

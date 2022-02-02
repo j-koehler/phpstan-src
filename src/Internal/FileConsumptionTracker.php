@@ -4,21 +4,22 @@ namespace PHPStan\Internal;
 
 use PHPStan\ShouldNotHappenException;
 use RuntimeException;
+use Webmozart\Assert\Assert;
 use function memory_get_peak_usage;
 use function microtime;
 
 class FileConsumptionTracker
 {
 
-	private int $memoryConsumedAtStart;
+	private int $memoryConsumedAtStart = 0;
 
-	private float $processingStartedAt;
+	private float $processingStartedAt = 0;
 
-	private float $timeConsumed;
+	private float $timeConsumed = 0;
 
-	private int $memoryConsumed;
+	private int $memoryConsumed = 0;
 
-	private int $totalMemoryConsumed;
+	private int $totalMemoryConsumed = 0;
 
 	private bool $trackingIsRunning = false;
 
@@ -115,9 +116,7 @@ class FileConsumptionTracker
 	}
 
 	/**
-	 * @param array{"file": string, "timeConsumed": float, "memoryConsumed": int, "totalMemoryConsumed": int} $consumptionData
-	 * @return self
-	 * @throws ShouldNotHappenException
+	 * @param array<mixed> $consumptionData
 	 */
 	public static function createFromArray(array $consumptionData): self
 	{
@@ -129,6 +128,10 @@ class FileConsumptionTracker
 		) {
 			throw new ShouldNotHappenException('invalid consumption data');
 		}
+		Assert::string($consumptionData['file']);
+		Assert::integer($consumptionData['totalMemoryConsumed']);
+		Assert::integer($consumptionData['memoryConsumed']);
+		Assert::float($consumptionData['timeConsumed']);
 
 		$obj = new self($consumptionData['file']);
 		$obj->setConsumptionData(

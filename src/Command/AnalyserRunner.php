@@ -34,17 +34,17 @@ class AnalyserRunner
 	 * @param Closure(int ): void|null $postFileCallback
 	 */
 	public function runAnalyser(
-		array                         $files,
-		array                         $allAnalysedFiles,
-		?Closure                      $preFileCallback,
-		?Closure                      $postFileCallback,
-		bool                          $debug,
-		bool                          $allowParallel,
-		?string                       $projectConfigFile,
-		?string                       $tmpFile,
-		?string                       $insteadOfFile,
+		array $files,
+		array $allAnalysedFiles,
+		?Closure $preFileCallback,
+		?Closure $postFileCallback,
+		bool $debug,
+		bool $allowParallel,
+		?string $projectConfigFile,
+		?string $tmpFile,
+		?string $insteadOfFile,
 		?ConsumptionTrackingCollector $consumptionTrackingCollector,
-		InputInterface                $input,
+		InputInterface $input,
 	): AnalyserResult
 	{
 		$filesCount = count($files);
@@ -71,8 +71,8 @@ class AnalyserRunner
 				$projectConfigFile,
 				$tmpFile,
 				$insteadOfFile,
+				$input,
 				$consumptionTrackingCollector,
-				$input
 			);
 		}
 
@@ -80,9 +80,9 @@ class AnalyserRunner
 			$this->switchTmpFile($files, $insteadOfFile, $tmpFile),
 			$preFileCallback,
 			$postFileCallback,
-			$consumptionTrackingCollector,
 			$debug,
 			$this->switchTmpFile($allAnalysedFiles, $insteadOfFile, $tmpFile),
+			$consumptionTrackingCollector,
 		);
 	}
 

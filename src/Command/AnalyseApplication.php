@@ -185,14 +185,18 @@ class AnalyseApplication
 			$errorOutput->getStyle()->progressFinish();
 		}
 
-		if ($debug && $stdOutput->isDebug() && isset($consumptionCollector)) {
+		if ($stdOutput->isDebug() && isset($consumptionCollector)) {
 			$stdOutput->writeLineFormatted('');
-			$stdOutput->writeLineFormatted('Top memory consumers:');
-			$rows = [];
-			foreach ($consumptionCollector->getHumanisedTopMemoryConsumers() as $file => $consumption) {
-				$rows[] = [ $file, $consumption ];
+			if ($debug) {
+				// top memory can be only be determined when not running in parallel
+				// so we just say: only in debug mode
+				$stdOutput->writeLineFormatted('Top memory consumers:');
+				$rows = [];
+				foreach ($consumptionCollector->getHumanisedTopMemoryConsumers() as $file => $consumption) {
+					$rows[] = [$file, $consumption];
+				}
+				$stdOutput->getStyle()->table(['file', 'memory consumed'], $rows);
 			}
-			$stdOutput->getStyle()->table(['file', 'memory consumed'], $rows);
 			$stdOutput->writeLineFormatted('Top time consumers:');
 			$rows = [];
 			foreach ($consumptionCollector->getHumanisedTopTimeConsumers() as $file => $consumption) {

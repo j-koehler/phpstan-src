@@ -209,6 +209,7 @@ class WorkerCommand extends Command
 			$exportedNodes = [];
 			$consumptionData = [];
 			foreach ($files as $file) {
+				$consumptionTracker = null;
 				if ($trackConsumption) {
 					$consumptionTracker = new FileConsumptionTracker($file);
 					$consumptionTracker->start();
@@ -238,7 +239,8 @@ class WorkerCommand extends Command
 
 					$errors[] = $internalErrorMessage;
 				}
-				if ($trackConsumption) {
+				// phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
+				if ($consumptionTracker instanceof FileConsumptionTracker) {
 					$consumptionTracker->stop();
 					$consumptionData[] = $consumptionTracker->toArray();
 				}

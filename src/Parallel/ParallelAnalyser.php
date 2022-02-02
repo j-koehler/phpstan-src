@@ -38,6 +38,8 @@ class ParallelAnalyser
 
 	private ProcessPool $processPool;
 
+	private ?ConsumptionTrackingCollector $consumptionTrackingCollector = null;
+
 	public function __construct(
 		private int $internalErrorsCountLimit,
 		float $processTimeout,
@@ -51,19 +53,20 @@ class ParallelAnalyser
 	 * @param Closure(int ): void|null $postFileCallback
 	 */
 	public function analyse(
-		Schedule                      $schedule,
-		string                        $mainScript,
-		?Closure                      $postFileCallback,
-		?string                       $projectConfigFile,
-		?string                       $tmpFile,
-		?string                       $insteadOfFile,
+		Schedule $schedule,
+		string $mainScript,
+		?Closure $postFileCallback,
+		?string $projectConfigFile,
+		?string $tmpFile,
+		?string $insteadOfFile,
+		InputInterface $input,
 		?ConsumptionTrackingCollector $consumptionTrackingCollector,
-		InputInterface                $input,
 	): AnalyserResult
 	{
 		$jobs = array_reverse($schedule->getJobs());
 		$loop = new StreamSelectLoop();
 
+		$this->consumptionTrackingCollector = $consumptionTrackingCollector;
 		$numberOfProcesses = $schedule->getNumberOfProcesses();
 		$errors = [];
 		$internalErrors = [];
@@ -143,7 +146,7 @@ class ParallelAnalyser
 				$commandOptions,
 				$input,
 			), $loop, $this->processTimeout);
-			$process->start(function (array $json) use ($process, &$internalErrors, &$errors, &$dependencies, &$exportedNodes, &$jobs, $postFileCallback, &$internalErrorsCount, &$reachedInternalErrorsCountLimit, $processIdentifier, $consumptionTrackingCollector): void {
+			$process->start(function (array $json) use ($process, &$internalErrors, &$errors, &$dependencies, &$exportedNodes, &$jobs, $postFileCallback, &$internalErrorsCount, &$reachedInternalErrorsCountLimit, $processIdentifier): void {
 				foreach ($json['errors'] as $jsonError) {
 					if (is_string($jsonError)) {
 						$internalErrors[] = sprintf('Internal error: %s', $jsonError);
@@ -176,11 +179,15 @@ class ParallelAnalyser
 					}, $fileExportedNodes);
 				}
 
-				/**
-				 * @var array{"file": string, "timeConsumed": float, "memoryConsumed": int, "totalMemoryConsumed": int} $consumptionData
-				 */
-				foreach ($json['consumptionData'] as $consumptionData) {
-					$consumptionTrackingCollector->addConsumption(FileConsumptionTracker::createFromArray($consumptionData));
+				if ($this->consumptionTrackingCollector !== null) {
+					/**
+					 * @var array{"file": string, "timeConsumed": float, "memoryConsumed": int, "totalMemoryConsumed": int} $consumptionData
+					 */
+					foreach ($json['consumptionData'] as $consumptionData) {
+						$this->consumptionTrackingCollector->addConsumption(
+							FileConsumptionTracker::createFromArray($consumptionData),
+						);
+					}
 				}
 
 				if ($postFileCallback !== null) {

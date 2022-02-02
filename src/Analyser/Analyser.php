@@ -31,12 +31,12 @@ class Analyser
 	 * @param string[]|null $allAnalysedFiles
 	 */
 	public function analyse(
-		array                         $files,
-		?Closure                      $preFileCallback = null,
-		?Closure                      $postFileCallback = null,
+		array $files,
+		?Closure $preFileCallback = null,
+		?Closure $postFileCallback = null,
+		bool $debug = false,
+		?array $allAnalysedFiles = null,
 		?ConsumptionTrackingCollector $consumptionTrackingCollector = null,
-		bool                          $debug = false,
-		?array                        $allAnalysedFiles = null,
 	): AnalyserResult
 	{
 		if ($allAnalysedFiles === null) {
@@ -52,12 +52,14 @@ class Analyser
 		$dependencies = [];
 		$exportedNodes = [];
 		foreach ($files as $file) {
+			$consumptionTracker = null;
+			if ($preFileCallback !== null) {
+				$preFileCallback($file);
+			}
+
 			if ($consumptionTrackingCollector !== null) {
 				$consumptionTracker = new FileConsumptionTracker($file);
 				$consumptionTracker->start();
-			}
-			if ($preFileCallback !== null) {
-				$preFileCallback($file);
 			}
 
 			try {
@@ -93,14 +95,15 @@ class Analyser
 				}
 			}
 
+			if ($consumptionTracker instanceof FileConsumptionTracker) {
+				$consumptionTracker->stop();
+				$consumptionTrackingCollector->addConsumption($consumptionTracker);
+			}
+
 			if ($postFileCallback === null) {
 				continue;
 			}
 
-			if ($consumptionTrackingCollector !== null) {
-				$consumptionTracker->stop();
-				$consumptionTrackingCollector->addConsumption($consumptionTracker);
-			}
 			$postFileCallback(1);
 		}
 
