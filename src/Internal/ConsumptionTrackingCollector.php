@@ -24,14 +24,14 @@ class ConsumptionTrackingCollector
 
 	private string $file = '';
 
-	public function __construct(private int $topX = 15, private int $purgeEveryXConsumers = 2000)
+	public function __construct(private int $topX = 15, private int $purgeEveryX = 1000)
 	{
 	}
 
 	public function addConsumption(FileConsumptionTracker $consumption): void
 	{
 		$this->consumersAdded++;
-		if ($this->consumersAdded > $this->purgeEveryXConsumers) {
+		if ($this->consumersAdded > $this->purgeEveryX) {
 			// save some memory on very large code bases
 			$this->purgeOverflow();
 		}
