@@ -57,12 +57,11 @@ class Analyser
 				$preFileCallback($file);
 			}
 
-			if ($consumptionTrackingCollector !== null) {
-				$consumptionTracker = new FileConsumptionTracker($file);
-				$consumptionTracker->start();
-			}
-
 			try {
+				if ($consumptionTrackingCollector !== null) {
+					$consumptionTracker = new FileConsumptionTracker($file);
+					$consumptionTracker->start();
+				}
 				$fileAnalyserResult = $this->fileAnalyser->analyseFile(
 					$file,
 					$allAnalysedFiles,
@@ -76,6 +75,12 @@ class Analyser
 				if (count($fileExportedNodes) > 0) {
 					$exportedNodes[$file] = $fileExportedNodes;
 				}
+
+				if ($consumptionTracker instanceof FileConsumptionTracker) {
+					$consumptionTracker->stop();
+					$consumptionTrackingCollector->addConsumption($consumptionTracker);
+				}
+
 			} catch (Throwable $t) {
 				if ($debug) {
 					throw $t;
@@ -93,11 +98,6 @@ class Analyser
 					$reachedInternalErrorsCountLimit = true;
 					break;
 				}
-			}
-
-			if ($consumptionTracker instanceof FileConsumptionTracker) {
-				$consumptionTracker->stop();
-				$consumptionTrackingCollector->addConsumption($consumptionTracker);
 			}
 
 			if ($postFileCallback === null) {

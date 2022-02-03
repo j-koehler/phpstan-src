@@ -225,6 +225,12 @@ class WorkerCommand extends Command
 					foreach ($fileErrors as $fileError) {
 						$errors[] = $fileError;
 					}
+
+					if ($consumptionTracker instanceof FileConsumptionTracker) {
+						$consumptionTracker->stop();
+						$consumptionData[] = $consumptionTracker->toArray();
+					}
+
 				} catch (Throwable $t) {
 					$this->errorCount++;
 					$internalErrorsCount++;
@@ -238,11 +244,6 @@ class WorkerCommand extends Command
 					}
 
 					$errors[] = $internalErrorMessage;
-				}
-				// phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
-				if ($consumptionTracker instanceof FileConsumptionTracker) {
-					$consumptionTracker->stop();
-					$consumptionData[] = $consumptionTracker->toArray();
 				}
 			}
 
