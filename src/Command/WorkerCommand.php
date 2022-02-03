@@ -210,13 +210,13 @@ class WorkerCommand extends Command
 			$consumptionData = [];
 			foreach ($files as $file) {
 				$consumptionTracker = null;
-				if ($trackConsumption) {
-					$consumptionTracker = new FileConsumptionTracker($file);
-					$consumptionTracker->start();
-				}
 				try {
 					if ($file === $insteadOfFile) {
 						$file = $tmpFile;
+					}
+					if ($trackConsumption) {
+						$consumptionTracker = new FileConsumptionTracker($file);
+						$consumptionTracker->start();
 					}
 					$fileAnalyserResult = $fileAnalyser->analyseFile($file, $analysedFiles, $registry, null);
 					$fileErrors = $fileAnalyserResult->getErrors();
